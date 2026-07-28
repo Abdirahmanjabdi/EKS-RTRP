@@ -30,11 +30,32 @@ resource "aws_lb" "main" {
   tags = { Name = "${var.project_name}-alb" }
 }
 
-# 3. ALB Listener on Port 80 forwarding to Target Group
+
+
+# 1. Port 80 Listener: Forces a redirect to HTTPS (Port 443)
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.main.arn
   port              = 80
   protocol          = "HTTP"
+
+  default_action {
+    type = "redirect"
+
+    redirect {
+        port        = "443"
+        protocol    = "HTTPS"
+        status_code = "HTTP_301"
+    }
+  }
+}
+
+# 2. Port 443 Listener: Terminates TLS using our ACM certificate and forwards to the target group
+resource "aws_lb_listener" "https" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn   = "arn:aws:acm:eu-north-1:026703081738:certificate/5fa4994c-2cad-408b-bf38-c6f20a406ec3"
 
   default_action {
     type             = "forward"
