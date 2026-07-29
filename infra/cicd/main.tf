@@ -76,15 +76,7 @@ resource "aws_iam_role_policy" "ci_s3_state" {
           "ecs:*",
           "elasticloadbalancing:*",
           "ec2:*",
-          "iam:GetRole",
-          "iam:PassRole",
-          "iam:ListRolePolicies",
-          "iam:GetRolePolicy",
-          "iam:ListAttachedRolePolicies",
-          "iam:AttachRolePolicy",
-          "iam:DetachRolePolicy",
-          "iam:PutRolePolicy",
-          "iam:DeleteRolePolicy",
+          "iam:*",
           "logs:*"
         ]
         Resource = ["arn:aws:s3:::rtrp-terraform-state-04b6152c/ecs/*"]
