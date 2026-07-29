@@ -43,13 +43,13 @@ jobs:
       - name: Terraform Init & Validate (ECS)
         working-directory: infra/ecs
         run: |
-          terraform init
+          terraform init -input=false
           terraform validate
 
       - name: Terraform Plan (ECS)
         working-directory: infra/ecs
         run: |
-          terraform plan
+          terraform plan -input=false
 
   terraform-apply:
     name: Terraform Apply
@@ -75,5 +75,6 @@ jobs:
       - name: Terraform Init & Apply (ECS)
         working-directory: infra/ecs
         run: |
-          terraform init
-          terraform apply -auto-approve
+          terraform init -input=false
+          terraform validate
+          terraform apply -input=false -auto-approve
