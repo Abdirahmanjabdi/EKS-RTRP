@@ -25,7 +25,7 @@ resource "aws_iam_openid_connect_provider" "github" {
   thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"] # Standard GitHub Actions OIDC thumbprint
 }
 
-# 2. IAM Role for GitHub Actions
+# 2. IAM Role for GitHub Actions (This was missing!)
 resource "aws_iam_role" "github_ci" {
   name = "rtrp-github-ci-role"
 
@@ -43,7 +43,7 @@ resource "aws_iam_role" "github_ci" {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
           StringLike = {
-            "token.actions.githubusercontent.com:sub" = "repo:Abdirahmanjabdi/RTRP:ref:refs/heads/main"
+            "token.actions.githubusercontent.com:sub" = "repo:Abdirahmanjabdi/RTRP:ref:refs/heads/*"
           }
         }
       }
@@ -51,7 +51,50 @@ resource "aws_iam_role" "github_ci" {
   })
 }
 
-# 3. Least-Privilege Inline Policy
+# 3. S3 State Policy
+resource "aws_iam_role_policy" "ci_s3_state" {
+  name = "rtrp-ci-terraform-s3-state"
+  role = aws_iam_role.github_ci.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = ["s3:ListBucket"]
+        Resource = ["arn:aws:s3:::rtrp-terraform-state-04b6152c"]
+        Condition = {
+          StringLike = {
+            "s3:prefix" = ["ecs/*", "ecs"]
+          }
+        }
+      },
+      {
+        Effect = "Allow"
+       Effect = "Allow"
+        Action = [
+          "ecs:*",
+          "elasticloadbalancing:*",
+          "ec2:*",
+          "iam:GetRole",
+          "iam:PassRole",
+          "iam:ListRolePolicies",
+          "iam:GetRolePolicy",
+          "iam:ListAttachedRolePolicies",
+          "iam:AttachRolePolicy",
+          "iam:DetachRolePolicy",
+          "iam:PutRolePolicy",
+          "iam:DeleteRolePolicy",
+          "logs:*"
+        ]
+        Resource = ["arn:aws:s3:::rtrp-terraform-state-04b6152c/ecs/*"]
+      }
+    ]
+  })
+}
+
+
+# 4. Least-Privilege Application/ECS/ECR/Infrastructure Policy
 resource "aws_iam_role_policy" "ci_permissions" {
   name = "rtrp-ci-permissions"
   role = aws_iam_role.github_ci.id
@@ -78,37 +121,42 @@ resource "aws_iam_role_policy" "ci_permissions" {
         ]
         Resource = "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-trade-api"
       },
-      # ECS Deployment Access
+      # ECS & Infrastructure Management Access for Terraform
       {
         Effect = "Allow"
         Action = [
-          "ecs:UpdateService",
-          "ecs:DescribeServices",
-          "ecs:DescribeTaskDefinition"
+          "ecs:*",
+          "elasticloadbalancing:*",
+          "ec2:*",
+          "iam:GetRole",
+          "iam:PassRole",
+          "logs:*"
         ]
         Resource = "*"
       },
-      # IAM PassRole for ECS Task and Execution Roles
+      # DynamoDB State Locking Access
       {
         Effect = "Allow"
-        Action = "iam:PassRole"
-        Resource = [
-          "arn:aws:iam::026703081738:role/rtrp-ecs-task-execution-role",
-          "arn:aws:iam::026703081738:role/rtrp-ecs-task-role"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:DeleteItem"
         ]
+        Resource = "arn:aws:dynamodb:eu-north-1:026703081738:table/rtrp-terraform-locks"
       },
-
       # S3 Terraform State Access
       {
         Effect = "Allow"
         Action = [
           "s3:GetObject",
           "s3:PutObject",
-          "s3:ListBucket"
+          "s3:DeleteObject",
+          "s3:ListBucket",
+          "s3:HeadObject"
         ]
         Resource = [
-          "arn:aws:s3:::rtrp-terraform-state-04b652c",
-          "arn:aws:s3:::rtrp-terraform-state-04b652c/*"
+          "arn:aws:s3:::rtrp-terraform-state-04b6152c",
+          "arn:aws:s3:::rtrp-terraform-state-04b6152c/*"
         ]
       }
     ]
