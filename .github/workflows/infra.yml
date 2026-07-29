@@ -1,0 +1,79 @@
+name: Infrastructure CI/CD
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'infra/**'
+      - '.github/workflows/infra.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'infra/**'
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write # Optional: allows commenting plan on PRs if desired
+
+jobs:
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+
+      - name: Configure AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::026703081738:role/rtrp-github-ci-role
+          aws-region: eu-north-1
+
+      # Note: Since your setup uses modular directories under infra/ (e.g. ecs, dns, cicd), 
+      # you can either run validation per-directory or select a root module. 
+      # Here we validate the core ECS infrastructure module as the primary example:
+      - name: Terraform Init & Validate (ECS)
+        working-directory: infra/ecs
+        run: |
+          terraform init
+          terraform validate
+
+      - name: Terraform Plan (ECS)
+        working-directory: infra/ecs
+        run: |
+          terraform plan
+
+  terraform-apply:
+    name: Terraform Apply
+    needs: terraform-plan
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production-infra # <-- This triggers the manual approval gate in GitHub UI
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+
+      - name: Configure AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::026703081738:role/rtrp-github-ci-role
+          aws-region: eu-north-1
+
+      - name: Terraform Init & Apply (ECS)
+        working-directory: infra/ecs
+        run: |
+          terraform init
+          terraform apply -auto-approve
