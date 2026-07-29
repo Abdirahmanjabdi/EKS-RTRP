@@ -43,7 +43,11 @@ resource "aws_iam_role" "github_ci" {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
           StringLike = {
-            "token.actions.githubusercontent.com:sub" = "repo:Abdirahmanjabdi/RTRP:ref:refs/heads/*"
+            # ADD BOTH CONDITIONS HERE AS A LIST:
+            "token.actions.githubusercontent.com:sub" = [
+              "repo:Abdirahmanjabdi/RTRP:ref:refs/heads/*",
+              "repo:Abdirahmanjabdi/RTRP:environment:production-infra"
+            ]
           }
         }
       }
