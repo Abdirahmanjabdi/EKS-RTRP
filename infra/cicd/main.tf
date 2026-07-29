@@ -96,6 +96,20 @@ resource "aws_iam_role_policy" "ci_permissions" {
           "arn:aws:iam::026703081738:role/rtrp-ecs-task-execution-role",
           "arn:aws:iam::026703081738:role/rtrp-ecs-task-role"
         ]
+      },
+
+      # S3 Terraform State Access
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:ListBucket"
+        ]
+        Resource = [
+          "arn:aws:s3:::rtrp-terraform-state-04b652c",
+          "arn:aws:s3:::rtrp-terraform-state-04b652c/*"
+        ]
       }
     ]
   })
