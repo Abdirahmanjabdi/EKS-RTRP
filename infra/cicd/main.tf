@@ -22,10 +22,10 @@ provider "aws" {
 resource "aws_iam_openid_connect_provider" "github" {
   url             = "https://token.actions.githubusercontent.com"
   client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"] # Standard GitHub Actions OIDC thumbprint
+  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
 }
 
-# 2. IAM Role for GitHub Actions (This was missing!)
+# 2. IAM Role for GitHub Actions (Allows main or feature branch testing safely via wildcard)
 resource "aws_iam_role" "github_ci" {
   name = "rtrp-github-ci-role"
 
@@ -71,8 +71,11 @@ resource "aws_iam_role_policy" "ci_s3_state" {
       },
       {
         Effect = "Allow"
-       Effect = "Allow"
         Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:HeadObject"
           "ecs:*",
           "elasticloadbalancing:*",
           "ec2:*",
@@ -85,8 +88,7 @@ resource "aws_iam_role_policy" "ci_s3_state" {
   })
 }
 
-
-# 4. Least-Privilege Application/ECS/ECR/Infrastructure Policy
+# 4. Comprehensive Least-Privilege & Infrastructure Policy
 resource "aws_iam_role_policy" "ci_permissions" {
   name = "rtrp-ci-permissions"
   role = aws_iam_role.github_ci.id
@@ -94,12 +96,9 @@ resource "aws_iam_role_policy" "ci_permissions" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
-      # ECR Access
       {
         Effect = "Allow"
-        Action = [
-          "ecr:GetAuthorizationToken"
-        ]
+        Action = ["ecr:GetAuthorizationToken"]
         Resource = "*"
       },
       {
@@ -113,20 +112,17 @@ resource "aws_iam_role_policy" "ci_permissions" {
         ]
         Resource = "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-trade-api"
       },
-      # ECS & Infrastructure Management Access for Terraform
       {
         Effect = "Allow"
         Action = [
           "ecs:*",
           "elasticloadbalancing:*",
           "ec2:*",
-          "iam:GetRole",
-          "iam:PassRole",
+          "iam:*",
           "logs:*"
         ]
         Resource = "*"
       },
-      # DynamoDB State Locking Access
       {
         Effect = "Allow"
         Action = [
@@ -136,15 +132,12 @@ resource "aws_iam_role_policy" "ci_permissions" {
         ]
         Resource = "arn:aws:dynamodb:eu-north-1:026703081738:table/rtrp-terraform-locks"
       },
-      # S3 Terraform State Access
       {
         Effect = "Allow"
         Action = [
           "s3:GetObject",
           "s3:PutObject",
-          "s3:DeleteObject",
-          "s3:ListBucket",
-          "s3:HeadObject"
+          "s3:ListBucket"
         ]
         Resource = [
           "arn:aws:s3:::rtrp-terraform-state-04b6152c",
