@@ -147,6 +147,38 @@ resource "aws_iam_role_policy" "ci_permissions" {
           "arn:aws:s3:::rtrp-terraform-state-04b6152c",
           "arn:aws:s3:::rtrp-terraform-state-04b6152c/*"
         ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:DescribeRepositories",
+          "ecr:GetRepositoryPolicy",
+          "ecr:ListTagsForResource"
+        ]
+        Resource = "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-trade-api"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "route53:GetHostedZone",
+          "route53:ListResourceRecordSets",
+          "route53:ChangeResourceRecordSets",
+          "route53:GetChange"
+        ]
+        Resource = [
+          "arn:aws:route53:::hostedzone/*",
+          "arn:aws:route53:::change/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "acm:DescribeCertificate",
+          "acm:ListTagsForCertificate",
+          "acm:RequestCertificate",
+          "acm:AddTagsToCertificate"
+        ]
+        Resource = "*"
       }
     ]
   })
