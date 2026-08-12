@@ -16,12 +16,16 @@ on:
 permissions:
   id-token: write
   contents: read
-  pull-requests: write # Optional: allows commenting plan on PRs if desired
+  pull-requests: write
 
 jobs:
   terraform-plan:
-    name: Terraform Plan
+    name: TF Plan (${{ matrix.module }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # Prevents one failure from cancelling the other successful plans
+      matrix:
+        module: [bootstrap, vpc, ecr, dns, ecs, cicd]
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -37,26 +41,26 @@ jobs:
           role-to-assume: arn:aws:iam::026703081738:role/rtrp-github-ci-role
           aws-region: eu-north-1
 
-      # Note: Since your setup uses modular directories under infra/ (e.g. ecs, dns, cicd), 
-      # you can either run validation per-directory or select a root module. 
-      # Here we validate the core ECS infrastructure module as the primary example:
-      - name: Terraform Init & Validate (ECS)
-        working-directory: infra/ecs
+      - name: Terraform Init & Validate
+        working-directory: infra/${{ matrix.module }}
         run: |
           terraform init -input=false
           terraform validate
 
-      - name: Terraform Plan (ECS)
-        working-directory: infra/ecs
-        run: |
-          terraform plan -input=false
+      - name: Terraform Plan
+        working-directory: infra/${{ matrix.module }}
+        run: terraform plan -input=false
 
   terraform-apply:
-    name: Terraform Apply
+    name: TF Apply (${{ matrix.module }})
     needs: terraform-plan
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    environment: production-infra # <-- This triggers the manual approval gate in GitHub UI
+    environment: production-infra # Single approval gate releases all matrix jobs
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [bootstrap, vpc, ecr, dns, ecs, cicd]
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -72,9 +76,8 @@ jobs:
           role-to-assume: arn:aws:iam::026703081738:role/rtrp-github-ci-role
           aws-region: eu-north-1
 
-      - name: Terraform Init & Apply (ECS)
-        working-directory: infra/ecs
+      - name: Terraform Init & Apply
+        working-directory: infra/${{ matrix.module }}
         run: |
           terraform init -input=false
-          terraform validate
           terraform apply -input=false -auto-approve
