@@ -79,7 +79,7 @@ resource "aws_iam_role_policy" "ci_s3_state" {
           "s3:GetObject",
           "s3:PutObject",
           "s3:DeleteObject",
-          "s3:HeadObject"
+          "s3:HeadObject",
           "ecs:*",
           "elasticloadbalancing:*",
           "ec2:*",
