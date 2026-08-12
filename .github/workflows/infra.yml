@@ -60,7 +60,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        module: [bootstrap, vpc, ecr, dns, ecs, cicd]
+        module: [ vpc, ecr, dns, ecs, cicd]
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
