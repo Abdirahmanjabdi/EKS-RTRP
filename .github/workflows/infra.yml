@@ -25,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false # Prevents one failure from cancelling the other successful plans
       matrix:
-        module: [bootstrap, vpc, ecr, dns, ecs, cicd]
+        module: [ vpc, ecr, dns, ecs, cicd]
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
