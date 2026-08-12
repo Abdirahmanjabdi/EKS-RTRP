@@ -163,6 +163,7 @@ resource "aws_iam_role_policy" "ci_permissions" {
           "route53:GetHostedZone",
           "route53:ListResourceRecordSets",
           "route53:ChangeResourceRecordSets",
+          "route53:ListTagsForResource",
           "route53:GetChange"
         ]
         Resource = [
