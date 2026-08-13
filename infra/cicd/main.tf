@@ -7,7 +7,7 @@ terraform {
     }
   }
   backend "s3" {
-    bucket         = "rtrp-terraform-state-04b6152c" 
+    bucket         = "rtrp-terraform-state-04b6152c"
     key            = "cicd/terraform.tfstate"
     region         = "eu-north-1"
     dynamodb_table = "rtrp-terraform-locks"
@@ -64,8 +64,8 @@ resource "aws_iam_role_policy" "ci_s3_state" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect = "Allow"
-        Action = ["s3:ListBucket"]
+        Effect   = "Allow"
+        Action   = ["s3:ListBucket"]
         Resource = ["arn:aws:s3:::rtrp-terraform-state-04b6152c"]
         Condition = {
           StringLike = {
@@ -101,8 +101,8 @@ resource "aws_iam_role_policy" "ci_permissions" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect = "Allow"
-        Action = ["ecr:GetAuthorizationToken"]
+        Effect   = "Allow"
+        Action   = ["ecr:GetAuthorizationToken"]
         Resource = "*"
       },
       {
@@ -180,7 +180,29 @@ resource "aws_iam_role_policy" "ci_permissions" {
           "acm:AddTagsToCertificate"
         ]
         Resource = "*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["mq:*"]
+        Resource = "*"
+      },
+      { Effect   = "Allow"
+        Action   = ["secretsmanager:CreateSecret"]
+        Resource = "*"
+      },
+      { Effect = "Allow"
+        Action = [
+          "secretsmanager:DescribeSecret",
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:PutSecretValue",
+          "secretsmanager:UpdateSecret",
+          "secretsmanager:DeleteSecret",
+          "secretsmanager:TagResource",
+          "secretsmanager:UntagResource"
+        ]
+        Resource = "arn:aws:secretsmanager:eu-north-1:026703081738:secret:rtrp-rabbitmq-credentials-*"
       }
+
     ]
   })
 }
