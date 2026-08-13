@@ -189,7 +189,7 @@ resource "aws_iam_role_policy" "ci_permissions" {
       { Effect   = "Allow"
         Action   = ["secretsmanager:CreateSecret"]
         Resource = "*"
-      },
+      }, 
       { Effect = "Allow"
         Action = [
           "secretsmanager:DescribeSecret",
