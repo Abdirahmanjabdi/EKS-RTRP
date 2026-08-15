@@ -82,6 +82,10 @@ resource "aws_ecs_service" "risk_engine" {
   lifecycle {
     ignore_changes = [task_definition]
   }
+
+    service_registries {
+    registry_arn = aws_service_discovery_service.risk_engine.arn
+  }
   
   depends_on = [
     aws_iam_role_policy_attachment.execution,

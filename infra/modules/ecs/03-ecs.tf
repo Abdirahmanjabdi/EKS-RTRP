@@ -127,6 +127,10 @@ resource "aws_ecs_service" "trade_api" {
     ignore_changes = [task_definition]
   }
 
+    service_registries {
+    registry_arn = aws_service_discovery_service.trade_api.arn
+  }
+
   load_balancer {
     target_group_arn = aws_lb_target_group.trade_api.arn
     container_name   = "trade-api"

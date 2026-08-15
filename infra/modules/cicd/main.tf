@@ -187,6 +187,13 @@ resource "aws_iam_role_policy" "ci_permissions" {
         Action   = ["mq:*"]
         Resource = "*"
       },
+
+     {
+        Effect   = "Allow"
+        Action   = ["servicediscovery:*"]
+        Resource = "*"
+      },
+
       { Effect   = "Allow"
         Action   = ["secretsmanager:CreateSecret"]
         Resource = "*"
@@ -202,7 +209,7 @@ resource "aws_iam_role_policy" "ci_permissions" {
           "secretsmanager:UntagResource",
           "secretsmanager:GetResourcePolicy"
         ]
-        Resource = "arn:aws:secretsmanager:eu-north-1:026703081738:secret:rtrp-rabbitmq-credentials-*"
+        Resource = "arn:aws:secretsmanager:eu-north-1:026703081738:secret:rtrp-*"
       }
 
     ]
