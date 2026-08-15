@@ -97,6 +97,18 @@ resource "aws_iam_role_policy" "ci_permissions" {
         Action   = ["rds:*"]
         Resource = "*"
       },
+
+      {
+        Effect   = "Allow"
+        Action   = ["rds:*"]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = ["elasticache:*"]
+        Resource = "*"
+      },
+
       {
         Effect = "Allow"
         Action = ["elasticache:*"]
@@ -114,7 +126,8 @@ resource "aws_iam_role_policy" "ci_permissions" {
         ]
         Resource = [
           "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-trade-api",
-          "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-risk-engine"
+          "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-risk-engine",
+          "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-prometheus"
         ]
       },
       {
@@ -156,7 +169,11 @@ resource "aws_iam_role_policy" "ci_permissions" {
           "ecr:GetRepositoryPolicy",
           "ecr:ListTagsForResource"
         ]
-        Resource = [ "*" ]
+        Resource = [
+          "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-trade-api",
+          "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-risk-engine",
+          "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-prometheus"
+        ]
       },
       {
         Effect = "Allow"

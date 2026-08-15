@@ -7,3 +7,8 @@ output "risk_engine_repository_url" {
   value       = aws_ecr_repository.risk_engine.repository_url
   description = "The URL of the ECR repository for the Risk Engine image"
 }
+
+output "prometheus_repository_url" {
+  value       = aws_ecr_repository.prometheus.repository_url
+  description = "The URL of the ECR repository for the Prometheus image"
+}

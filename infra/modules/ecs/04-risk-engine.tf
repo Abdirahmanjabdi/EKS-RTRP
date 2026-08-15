@@ -19,6 +19,14 @@ resource "aws_security_group" "risk_engine" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+  
+  ingress {
+    description     = "Metrics scraping from Prometheus"
+    from_port       = 8001
+    to_port         = 8001
+    protocol        = "tcp"
+    security_groups = [aws_security_group.prometheus.id]
+  }
 
   tags = { Name = "${var.project_name}-risk-engine-sg" }
 }
@@ -38,21 +46,26 @@ resource "aws_ecs_task_definition" "risk_engine" {
     image     = "026703081738.dkr.ecr.eu-north-1.amazonaws.com/rtrp-risk-engine:v0"
     essential = true
     environment = [
-      {
-        name  = "RABBITMQ_URL"
-        value = var.rabbitmq_amqps_endpoint
-      }
+      { name = "RABBITMQ_URL", value = var.rabbitmq_amqps_endpoint },
+      { name = "POSTGRES_HOST", value = var.postgres_host },
+      { name = "POSTGRES_PORT", value = var.postgres_port },
+      { name = "POSTGRES_DB", value = var.postgres_db },
+      { name = "REDIS_HOST", value = var.redis_host },
+      { name = "REDIS_PORT", value = var.redis_port }
     ]
     secrets = [
-      {
-        name      = "RABBITMQ_USERNAME"
-        valueFrom = "${var.rabbitmq_credentials_secret_arn}:username::"
-      },
-      {
-        name      = "RABBITMQ_PASSWORD"
-        valueFrom = "${var.rabbitmq_credentials_secret_arn}:password::"
-      }
+      { name = "RABBITMQ_USERNAME", valueFrom = "${var.rabbitmq_credentials_secret_arn}:username::" },
+      { name = "RABBITMQ_PASSWORD", valueFrom = "${var.rabbitmq_credentials_secret_arn}:password::" },
+      { name = "POSTGRES_USER", valueFrom = "${var.postgres_credentials_secret_arn}:username::" },
+      { name = "POSTGRES_PASSWORD", valueFrom = "${var.postgres_credentials_secret_arn}:password::" },
+      { name = "REDIS_AUTH_TOKEN", valueFrom = var.redis_auth_token_secret_arn }
     ]
+
+    portMappings = [{
+      containerPort = 8001
+      hostPort      = 8001
+    }]
+
     logConfiguration = {
       logDriver = "awslogs"
       options = {
@@ -86,6 +99,7 @@ resource "aws_ecs_service" "risk_engine" {
     service_registries {
     registry_arn = aws_service_discovery_service.risk_engine.arn
   }
+
   
   depends_on = [
     aws_iam_role_policy_attachment.execution,

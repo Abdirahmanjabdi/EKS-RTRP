@@ -32,3 +32,25 @@ variable "rabbitmq_credentials_secret_arn" {
   type        = string
   description = "Secrets Manager ARN holding RabbitMQ username/password, injected into containers via the ECS execution role"
 }
+
+variable "postgres_host" {
+  type = string
+}
+variable "postgres_port" {
+  type = string
+}
+variable "postgres_db" {
+  type = string
+}
+variable "postgres_credentials_secret_arn" {
+  type = string
+}
+variable "redis_host" {
+  type = string
+}
+variable "redis_port" {
+  type = string
+}
+variable "redis_auth_token_secret_arn" {
+  type = string
+}
