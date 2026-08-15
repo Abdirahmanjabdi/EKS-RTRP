@@ -18,6 +18,8 @@ provider "aws" {
   region = "eu-north-1"
 }
 
+module "cicd" {
+  source = "../modules/cicd"
 # 1. GitHub OIDC Provider
 resource "aws_iam_openid_connect_provider" "github" {
   url             = "https://token.actions.githubusercontent.com"
