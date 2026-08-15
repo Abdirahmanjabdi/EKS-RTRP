@@ -85,6 +85,12 @@ resource "aws_iam_role_policy" "ci_permissions" {
         Action   = ["ecr:GetAuthorizationToken"]
         Resource = "*"
       },
+
+      {
+        Effect   = "Allow"
+        Action   = ["ecr:CreateRepository"]
+        Resource = "*"
+      },
       {
         Effect = "Allow"
         Action = [
@@ -94,7 +100,10 @@ resource "aws_iam_role_policy" "ci_permissions" {
           "ecr:BatchCheckLayerAvailability",
           "ecr:PutImage"
         ]
-        Resource = "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-trade-api"
+        Resource = [
+          "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-trade-api",
+          "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-risk-engine"
+        ]
       },
       {
         Effect = "Allow"
@@ -135,7 +144,10 @@ resource "aws_iam_role_policy" "ci_permissions" {
           "ecr:GetRepositoryPolicy",
           "ecr:ListTagsForResource"
         ]
-        Resource = "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-trade-api"
+        Resource = [
+          "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-trade-api",
+          "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-risk-engine"
+        ]
       },
       {
         Effect = "Allow"
@@ -178,7 +190,8 @@ resource "aws_iam_role_policy" "ci_permissions" {
           "secretsmanager:UpdateSecret",
           "secretsmanager:DeleteSecret",
           "secretsmanager:TagResource",
-          "secretsmanager:UntagResource"
+          "secretsmanager:UntagResource",
+          "secretsmanager:GetResourcePolicy"
         ]
         Resource = "arn:aws:secretsmanager:eu-north-1:026703081738:secret:rtrp-rabbitmq-credentials-*"
       }
