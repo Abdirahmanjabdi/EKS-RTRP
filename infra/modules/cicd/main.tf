@@ -88,7 +88,7 @@ resource "aws_iam_role_policy" "ci_permissions" {
 
       {
         Effect   = "Allow"
-        Action   = ["ecr:CreateRepository"]
+        Action   = ["ecr:CreateRepository", "ecr:TagResource", "ecr:UntagResource"]
         Resource = "*"
       },
       {
