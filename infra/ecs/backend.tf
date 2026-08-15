@@ -28,3 +28,25 @@ data "terraform_remote_state" "vpc" {
     region = "eu-north-1"
   }
 }
+
+data "terraform_remote_state" "messaging" {
+  backend = "s3"
+  config = {
+    bucket = "rtrp-terraform-state-04b6152c"
+    key    = "messaging/terraform.tfstate"
+    region = "eu-north-1"
+  }
+}
+
+module "ecs" {
+  source = "../modules/ecs"
+
+  aws_region          = var.aws_region
+  project_name        = var.project_name
+  vpc_id              = data.terraform_remote_state.vpc.outputs.vpc_id
+  public_subnet_ids   = data.terraform_remote_state.vpc.outputs.public_subnet_ids
+  private_subnet_ids  = data.terraform_remote_state.vpc.outputs.private_subnet_ids
+
+  rabbitmq_amqps_endpoint         = data.terraform_remote_state.messaging.outputs.amqps_endpoint
+  rabbitmq_credentials_secret_arn = data.terraform_remote_state.messaging.outputs.credentials_secret_arn
+}

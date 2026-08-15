@@ -1,14 +1,14 @@
 output "broker_id" {
-  value       = aws_mq_broker.rabbitmq.id
+  value       = module.messaging.broker_id
   description = "Amazon MQ broker ID"
 }
 
-output "amqps_endpoints" {
-  value       = aws_mq_broker.rabbitmq.instances[0].endpoints
-  description = "AMQPS endpoint URLs for the RabbitMQ broker"
+output "amqps_endpoint" {
+  value       = module.messaging.amqps_endpoint
+  description = "AMQPS endpoint URL for the RabbitMQ broker (not the HTTPS management console URL)"
 }
 
 output "credentials_secret_arn" {
-  value       = aws_secretsmanager_secret.rabbitmq.arn
+  value       = module.messaging.credentials_secret_arn
   description = "Secrets Manager ARN holding the broker username/password"
 }

@@ -5,59 +5,108 @@ on:
     branches:
       - main
     paths:
-      - 'app/**'
+      - 'main.py'
+      - 'requirements.txt'
       - 'Dockerfile'
+      - 'risk_engine/**'
       - '.github/workflows/app.yml'
+  workflow_dispatch:
 
 permissions:
-  id-token: write # Required for requesting the JWT OIDC token
-  contents: read     # Required for checking out code
+  id-token: write
+  contents: read
 
 jobs:
-  deploy:
+  deploy-trade-api:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::026703081738:role/rtrp-github-ci-role
           aws-region: eu-north-1
 
-      - name: Login to Amazon ECR
-        id: login-ecr
+      - id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build, Tag, and Push Image to Amazon ECR
+      - id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: rtrp-trade-api
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-      - name: Update Amazon ECS Service
+      - name: Fetch current task definition
         run: |
-          aws ecs update-service \
-            --cluster rtrp-cluster \
-            --service rtrp-trade-api-service \
-            --force-new-deployment
+          aws ecs describe-task-definition --task-definition rtrp-trade-api \
+            --query taskDefinition > task-definition.json
+
+      - id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: trade-api
+          image: ${{ steps.build-image.outputs.image }}
+
+      - uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: rtrp-trade-api-service
+          cluster: rtrp-cluster
+          wait-for-service-stability: true
 
       - name: Health Check Gate
         run: |
-          echo "Waiting for service to stabilize and serve traffic..."
-          sleep 30
-          
-          echo "Testing health endpoint..."
           response=$(curl -s -o /dev/null -w "%{http_code}" https://tm.sentineltrading.org/health)
-          
           if [ "$response" -eq 200 ]; then
-            echo "Health check passed with status 200 OK!"
+            echo "Health check passed"
           else
-            echo "Health check failed with status code: $response"
+            echo "Health check failed with status: $response"
             exit 1
           fi
+
+  deploy-risk-engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::026703081738:role/rtrp-github-ci-role
+          aws-region: eu-north-1
+
+      - id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: rtrp-risk-engine
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG risk_engine/
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Fetch current task definition
+        run: |
+          aws ecs describe-task-definition --task-definition rtrp-risk-engine \
+            --query taskDefinition > task-definition.json
+
+      - id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: risk-engine
+          image: ${{ steps.build-image.outputs.image }}
+
+      - uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: rtrp-risk-engine-service
+          cluster: rtrp-cluster
+          wait-for-service-stability: true

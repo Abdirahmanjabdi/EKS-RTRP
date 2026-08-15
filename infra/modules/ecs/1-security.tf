@@ -1,18 +1,8 @@
-variable "aws_region" {
-  type    = string
-  default = "eu-north-1"
-}
-
-variable "project_name" {
-  type    = string
-  default = "rtrp"
-}
-
 # 1. ALB Security Group (Allows public HTTP access from the internet)
 resource "aws_security_group" "alb" {
   name        = "${var.project_name}-alb-sg"
   description = "Allow inbound HTTP traffic from the internet"
-  vpc_id      = data.terraform_remote_state.vpc.outputs.vpc_id
+  vpc_id      = var.vpc_id
 
   ingress {
     description = "HTTP from internet"
@@ -21,7 +11,6 @@ resource "aws_security_group" "alb" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  # --> ADD THIS BLOCK RIGHT HERE <--
   ingress {
     description = "HTTPS from internet"
     from_port   = 443
@@ -45,7 +34,7 @@ resource "aws_security_group" "alb" {
 resource "aws_security_group" "ecs_tasks" {
   name        = "${var.project_name}-ecs-tasks-sg"
   description = "Allow inbound traffic exclusively from the ALB"
-  vpc_id      = data.terraform_remote_state.vpc.outputs.vpc_id
+  vpc_id      = var.vpc_id
 
   ingress {
     description     = "HTTP from ALB only"

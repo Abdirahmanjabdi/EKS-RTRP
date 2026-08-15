@@ -1,0 +1,150 @@
+name: Terraform Destroy
+
+# Manual-only, never on push/pull_request — a destroy pipeline that can fire
+# automatically is one bad trigger away from tearing down production.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "destroy-rtrp" to confirm — this tears down real infrastructure'
+        required: true
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  guard:
+    name: Confirm Destroy Intent
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify confirmation phrase
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "destroy-rtrp" ]; then
+            echo "Confirmation phrase did not match 'destroy-rtrp'. Aborting."
+            exit 1
+          fi
+
+  # Order matters here:
+  # - dns first: it depends on ecs, nothing depends on dns.
+  # - messaging before ecs, then ecr, then vpc: ecs and messaging read each
+  #   other's remote state, so whichever gets destroyed second will hit the
+  #   same "Unsupported attribute" error we saw during setup, just in
+  #   reverse. No ordering avoids this cleanly with the current setup — if
+  #   ecs's destroy fails on a missing messaging output, hardcode a
+  #   placeholder over that remote_state reference, apply, then retry.
+  # - cicd is always last: it's the OIDC role this whole workflow runs as.
+  #   bootstrap is never touched here — it's the state backend itself.
+  destroy-dns:
+    name: Destroy dns
+    needs: guard
+    runs-on: ubuntu-latest
+    environment: production-infra
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::026703081738:role/rtrp-github-ci-role
+          aws-region: eu-north-1
+      - working-directory: infra/dns
+        run: |
+          terraform init -input=false
+          terraform destroy -input=false -auto-approve
+
+  destroy-messaging:
+    name: Destroy messaging
+    needs: destroy-dns
+    runs-on: ubuntu-latest
+    environment: production-infra
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::026703081738:role/rtrp-github-ci-role
+          aws-region: eu-north-1
+      - working-directory: infra/messaging
+        run: |
+          terraform init -input=false
+          terraform destroy -input=false -auto-approve
+
+  destroy-ecs:
+    name: Destroy ecs
+    needs: destroy-messaging
+    runs-on: ubuntu-latest
+    environment: production-infra
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::026703081738:role/rtrp-github-ci-role
+          aws-region: eu-north-1
+      - working-directory: infra/ecs
+        run: |
+          terraform init -input=false
+          terraform destroy -input=false -auto-approve
+
+  destroy-ecr:
+    name: Destroy ecr
+    needs: destroy-ecs
+    runs-on: ubuntu-latest
+    environment: production-infra
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::026703081738:role/rtrp-github-ci-role
+          aws-region: eu-north-1
+      - working-directory: infra/ecr
+        run: |
+          terraform init -input=false
+          terraform destroy -input=false -auto-approve
+
+  destroy-vpc:
+    name: Destroy vpc
+    needs: destroy-ecr
+    runs-on: ubuntu-latest
+    environment: production-infra
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::026703081738:role/rtrp-github-ci-role
+          aws-region: eu-north-1
+      - working-directory: infra/vpc
+        run: |
+          terraform init -input=false
+          terraform destroy -input=false -auto-approve
+
+  destroy-cicd:
+    name: Destroy cicd (always last — see comment above)
+    needs: destroy-vpc
+    runs-on: ubuntu-latest
+    environment: production-infra
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::026703081738:role/rtrp-github-ci-role
+          aws-region: eu-north-1
+      - working-directory: infra/cicd
+        run: |
+          terraform init -input=false
+          terraform destroy -input=false -auto-approve

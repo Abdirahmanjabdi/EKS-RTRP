@@ -23,6 +23,25 @@ resource "aws_iam_role_policy_attachment" "execution" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+# The managed policy above covers ECR + logs, not Secrets Manager — this is
+# what lets the execution role resolve RABBITMQ_USERNAME/PASSWORD at launch
+# via the `secrets` blocks below, instead of the app fetching them itself.
+resource "aws_iam_role_policy" "execution_secrets" {
+  name = "${var.project_name}-ecs-execution-secrets"
+  role = aws_iam_role.execution.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["secretsmanager:GetSecretValue"]
+        Resource = var.rabbitmq_credentials_secret_arn
+      }
+    ]
+  })
+}
+
 # 3. IAM Task Role (Placeholder for M2+ AWS API integrations)
 resource "aws_iam_role" "task" {
   name = "${var.project_name}-ecs-task-role"
@@ -60,6 +79,25 @@ resource "aws_ecs_task_definition" "trade_api" {
       containerPort = 8000
       hostPort      = 8000
     }]
+    environment = [
+      {
+        name  = "RABBITMQ_URL"
+        value = var.rabbitmq_amqps_endpoint
+      }
+    ]
+    # valueFrom syntax: "<secret-arn>:<json-key>:<version-stage>:<version-id>",
+    # empty trailing = current version. Pulls one key out of the JSON blob
+    # infra/messaging wrote, not the whole secret.
+    secrets = [
+      {
+        name      = "RABBITMQ_USERNAME"
+        valueFrom = "${var.rabbitmq_credentials_secret_arn}:username::"
+      },
+      {
+        name      = "RABBITMQ_PASSWORD"
+        valueFrom = "${var.rabbitmq_credentials_secret_arn}:password::"
+      }
+    ]
     logConfiguration = {
       logDriver = "awslogs"
       options = {
@@ -80,9 +118,13 @@ resource "aws_ecs_service" "trade_api" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets          = data.terraform_remote_state.vpc.outputs.private_subnet_ids
+    subnets          = var.private_subnet_ids
     security_groups  = [aws_security_group.ecs_tasks.id]
     assign_public_ip = false
+  }
+
+  lifecycle {
+    ignore_changes = [task_definition]
   }
 
   load_balancer {

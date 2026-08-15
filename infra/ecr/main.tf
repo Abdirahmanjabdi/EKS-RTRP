@@ -20,20 +20,9 @@ provider "aws" {
   region = var.aws_region
 }
 
-resource "aws_ecr_repository" "trade_api" {
-  name                 = "${var.project_name}-${var.repository_name}"
-  image_tag_mutability = "IMMUTABLE" # Enforces absolute artifact traceability
+module "ecr" {
+  source = "../modules/ecr"
 
-  image_scanning_configuration {
-    scan_on_push = true # Automated free CVE security checks
-  }
-
-  encryption_configuration {
-    encryption_type = "AES256"
-  }
-
-  tags = {
-    Environment = "dev"
-    ManagedBy   = "Terraform"
-  }
+  project_name    = var.project_name
+  repository_name = var.repository_name
 }
