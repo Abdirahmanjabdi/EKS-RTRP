@@ -7,46 +7,45 @@ import uuid
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 
+import numpy as np
 import pika
 import redis
 from pika.exceptions import AMQPError
-from prometheus_client import Counter, Gauge, Histogram, start_http_server
+from prometheus_client import Counter, Histogram, start_http_server
+from sklearn.ensemble import IsolationForest
 from sqlalchemy import Column, DateTime, Float, String, create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-logger = logging.getLogger("risk-engine")
+logger = logging.getLogger("ml-inference")
 
-EXCHANGE_NAME = "rtrp.trades"
-ROUTING_KEY = "trade.created"
-QUEUE_NAME = "risk-engine.trade-events"
-METRICS_PORT = 8001
-
-# Separate exchange from rtrp.trades on purpose — that one is trade lifecycle
-# events; this one is risk-computation results, a different kind of thing
-# with different consumers (M4's ML Inference and Alerting, not built yet).
 RISK_EXCHANGE_NAME = "rtrp.risk"
 RISK_ROUTING_KEY = "risk.computed"
+QUEUE_NAME = "ml-inference.risk-events"
 
-EVENTS_PROCESSED = Counter("risk_events_processed_total", "Total trade events processed")
-PROCESSING_DURATION = Histogram(
-    "risk_processing_duration_seconds", "Time to compute and persist risk for one event"
-)
-LATEST_EXPOSURE = Gauge(
-    "risk_latest_exposure", "Most recently computed notional exposure per symbol", ["symbol"]
+ALERTS_EXCHANGE_NAME = "rtrp.alerts"
+ALERT_ROUTING_KEY = "alert.triggered"
+
+METRICS_PORT = 8002
+WINDOW_SIZE = 50
+MIN_SAMPLES = 10  # below this, there's no history to compare against —
+                  # detection is skipped rather than false-flagging on nothing.
+
+EVENTS_PROCESSED = Counter("ml_events_processed_total", "Total risk events scored")
+ANOMALIES_DETECTED = Counter("ml_anomalies_detected_total", "Total anomalies flagged")
+INFERENCE_DURATION = Histogram(
+    "ml_inference_duration_seconds", "Time to fit and score one risk event"
 )
 
 Base = declarative_base()
 
-class RiskComputation(Base):
-    __tablename__ = "risk_computations"
+class Anomaly(Base):
+    __tablename__ = "anomalies"
     event_id = Column(String, primary_key=True)
     symbol = Column(String, nullable=False, index=True)
     exposure = Column(Float, nullable=False)
-    computed_at = Column(DateTime, nullable=False)
+    detected_at = Column(DateTime, nullable=False)
 
-# Same reasoning as Trade API: SQLAlchemy's engine pools connections and is
-# meant to be created once, unlike the per-message pika connection below.
 _engine = None
 
 def get_engine():
@@ -69,31 +68,44 @@ def get_redis() -> redis.Redis:
     )
 
 
-def compute_notional_exposure(trade: dict) -> float:
-    # Placeholder — proves the pipeline end to end. Real VaR/PnL comes later.
-    return trade["quantity"] * trade["price"]
+def get_window(r: redis.Redis, symbol: str) -> list:
+    return [float(v) for v in r.lrange(f"risk:history:{symbol}", 0, -1)]
+
+def update_window(r: redis.Redis, symbol: str, exposure: float) -> None:
+    key = f"risk:history:{symbol}"
+    r.lpush(key, exposure)
+    r.ltrim(key, 0, WINDOW_SIZE - 1)
 
 
-def persist_and_cache(event_id: str, symbol: str, exposure: float) -> None:
+def is_anomaly(window: list, new_value: float) -> bool:
+    # Fit on the window as it stood *before* this point, then score the new
+    # point against that baseline — scoring a point against a model fit
+    # including itself would bias every point toward looking normal.
+    X = np.array(window).reshape(-1, 1)
+    model = IsolationForest(contamination=0.1, random_state=42)
+    model.fit(X)
+    prediction = model.predict([[new_value]])
+    return bool(prediction[0] == -1)
+
+
+def persist_anomaly(event_id: str, symbol: str, exposure: float) -> None:
     session = sessionmaker(bind=get_engine())()
     try:
-        session.add(RiskComputation(
+        session.add(Anomaly(
             event_id=event_id,
             symbol=symbol,
             exposure=exposure,
-            computed_at=datetime.now(timezone.utc),
+            detected_at=datetime.now(timezone.utc),
         ))
         session.commit()
     finally:
         session.close()
 
-    get_redis().set(f"risk:latest:{symbol}", exposure)
 
-
-def publish_risk_computed(channel, trade_event_id: str, symbol: str, exposure: float) -> None:
+def publish_alert(channel, trade_event_id: str, symbol: str, exposure: float) -> None:
     envelope = {
         "event_id": str(uuid.uuid4()),
-        "event_type": RISK_ROUTING_KEY,
+        "event_type": "ml_anomaly",
         "occurred_at": datetime.now(timezone.utc).isoformat(),
         "schema_version": 1,
         "data": {
@@ -103,8 +115,8 @@ def publish_risk_computed(channel, trade_event_id: str, symbol: str, exposure: f
         },
     }
     channel.basic_publish(
-        exchange=RISK_EXCHANGE_NAME,
-        routing_key=RISK_ROUTING_KEY,
+        exchange=ALERTS_EXCHANGE_NAME,
+        routing_key=ALERT_ROUTING_KEY,
         body=json.dumps(envelope),
         properties=pika.BasicProperties(content_type="application/json", delivery_mode=2),
         mandatory=True,
@@ -112,36 +124,30 @@ def publish_risk_computed(channel, trade_event_id: str, symbol: str, exposure: f
 
 
 def handle_message(channel, method, properties, body):
-    with PROCESSING_DURATION.time():
+    with INFERENCE_DURATION.time():
         try:
             envelope = json.loads(body)
-            trade = envelope["data"]
-            event_id = envelope.get("event_id")
-            symbol = trade.get("symbol")
-            exposure = compute_notional_exposure(trade)
+            data = envelope["data"]
+            symbol = data["symbol"]
+            exposure = data["exposure"]
+            trade_event_id = data.get("trade_event_id")
 
-            logger.info(
-                "risk computed event_id=%s symbol=%s exposure=%.2f",
-                event_id, symbol, exposure,
-            )
+            r = get_redis()
+            window = get_window(r, symbol)
 
-            # Same resilience stance as Trade API: the message is only acked
-            # after persistence succeeds, so a DB/cache outage causes a
-            # requeue-and-retry rather than a silently lost computation —
-            # unlike the API's write, this one isn't allowed to fail quietly.
-            persist_and_cache(event_id, symbol, exposure)
-            LATEST_EXPOSURE.labels(symbol=symbol).set(exposure)
+            anomalous = len(window) >= MIN_SAMPLES and is_anomaly(window, exposure)
+            update_window(r, symbol, exposure)
+
+            if anomalous:
+                logger.info("anomaly detected symbol=%s exposure=%.2f", symbol, exposure)
+                persist_anomaly(envelope["event_id"], symbol, exposure)
+                try:
+                    publish_alert(channel, trade_event_id, symbol, exposure)
+                except Exception:
+                    logger.exception("failed to publish alert.triggered, continuing")
+                ANOMALIES_DETECTED.inc()
+
             EVENTS_PROCESSED.inc()
-
-            # Downstream of persistence, not before: ML Inference and
-            # Alerting only need to see risk that's already durably
-            # recorded, and a failed publish here shouldn't cause the
-            # already-computed, already-persisted risk to be requeued.
-            try:
-                publish_risk_computed(channel, event_id, symbol, exposure)
-            except Exception:
-                logger.exception("failed to publish risk.computed, continuing")
-
             channel.basic_ack(delivery_tag=method.delivery_tag)
         except Exception:
             logger.exception("failed to process message, requeueing")
@@ -173,15 +179,10 @@ def main():
             connection = connect()
             channel = connection.channel()
             channel.confirm_delivery()
-            # The consumer owns the queue, not the producer — Trade API's
-            # main.py only ever talks to the exchange, never this queue.
-            channel.exchange_declare(exchange=EXCHANGE_NAME, exchange_type="topic", durable=True)
-            channel.queue_declare(queue=QUEUE_NAME, durable=True)
-            channel.queue_bind(exchange=EXCHANGE_NAME, queue=QUEUE_NAME, routing_key=ROUTING_KEY)
-            # Declared here too, not just by ML Inference/Alerting's consumers
-            # — same reasoning as EXCHANGE_NAME above: whoever publishes
-            # first shouldn't have to trust that a consumer already exists.
             channel.exchange_declare(exchange=RISK_EXCHANGE_NAME, exchange_type="topic", durable=True)
+            channel.exchange_declare(exchange=ALERTS_EXCHANGE_NAME, exchange_type="topic", durable=True)
+            channel.queue_declare(queue=QUEUE_NAME, durable=True)
+            channel.queue_bind(exchange=RISK_EXCHANGE_NAME, queue=QUEUE_NAME, routing_key=RISK_ROUTING_KEY)
             channel.basic_qos(prefetch_count=10)
             channel.basic_consume(queue=QUEUE_NAME, on_message_callback=handle_message, auto_ack=False)
 

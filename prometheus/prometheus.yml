@@ -11,3 +11,13 @@ scrape_configs:
     static_configs:
       - targets: ["risk-engine.rtrp.local:8001"]
     metrics_path: /metrics
+
+  - job_name: "ml-inference"
+    static_configs:
+      - targets: ["ml-inference.rtrp.local:8002"]
+    metrics_path: /metrics
+
+  - job_name: "alerting"
+    static_configs:
+      - targets: ["alerting.rtrp.local:8003"]
+    metrics_path: /metrics

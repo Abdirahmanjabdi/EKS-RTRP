@@ -17,6 +17,14 @@ resource "aws_security_group" "prometheus" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+    ingress {
+    description     = "Query API from Grafana"
+    from_port       = 9090
+    to_port         = 9090
+    protocol        = "tcp"
+    security_groups = [aws_security_group.grafana.id]
+  }
+
   tags = { Name = "${var.project_name}-prometheus-sg" }
 }
 
