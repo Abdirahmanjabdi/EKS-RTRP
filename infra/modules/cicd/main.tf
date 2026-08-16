@@ -104,6 +104,18 @@ resource "aws_iam_role_policy" "ci_permissions" {
       },
 
       {
+        Effect   = "Allow"
+        Action   = ["sns:*"]
+        Resource = "*"
+      },
+
+      {
+        Effect = "Allow"
+        Action = ["elasticache:*"]
+        Resource = "*"
+      },
+
+      {
         Effect = "Allow"
         Action = [
           "ecr:CompleteLayerUpload",
@@ -116,7 +128,9 @@ resource "aws_iam_role_policy" "ci_permissions" {
           "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-trade-api",
           "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-risk-engine",
           "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-prometheus",
-          "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-grafana"
+          "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-grafana",
+          "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-ml-inference",
+          "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-alerting"
         ]
       },
       {
@@ -162,7 +176,9 @@ resource "aws_iam_role_policy" "ci_permissions" {
           "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-trade-api",
           "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-risk-engine",
           "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-prometheus",
-          "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-grafana"
+          "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-grafana",
+          "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-ml-inference",
+          "arn:aws:ecr:eu-north-1:026703081738:repository/rtrp-alerting"
         ]
       },
       {

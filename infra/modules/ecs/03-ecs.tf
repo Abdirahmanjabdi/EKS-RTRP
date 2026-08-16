@@ -155,3 +155,19 @@ resource "aws_ecs_service" "trade_api" {
     aws_iam_role_policy_attachment.execution
   ]
 }
+
+resource "aws_iam_role_policy" "task_sns" {
+  name = "${var.project_name}-ecs-task-sns"
+  role = aws_iam_role.task.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["sns:Publish"]
+        Resource = var.sns_topic_arn
+      }
+    ]
+  })
+}

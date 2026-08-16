@@ -10,6 +10,8 @@ on:
       - 'Dockerfile'
       - 'risk_engine/**'
       - '.github/workflows/app.yml'
+      - 'ml_inference/**'
+      - 'alerting/**'
   workflow_dispatch:
 
 permissions:
@@ -110,3 +112,75 @@ jobs:
           service: rtrp-risk-engine-service
           cluster: rtrp-cluster
           wait-for-service-stability: true
+
+  deploy-ml-inference:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::026703081738:role/rtrp-github-ci-role
+          aws-region: eu-north-1
+      - id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: rtrp-ml-inference
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ml_inference/
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+      - name: Fetch current task definition
+        run: |
+          aws ecs describe-task-definition --task-definition rtrp-ml-inference \
+            --query taskDefinition > task-definition.json
+      - id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: ml-inference
+          image: ${{ steps.build-image.outputs.image }}
+      - uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: rtrp-ml-inference-service
+          cluster: rtrp-cluster
+          wait-for-service-stability: true
+
+  deploy-alerting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::026703081738:role/rtrp-github-ci-role
+          aws-region: eu-north-1
+      - id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: rtrp-alerting
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG alerting/
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+      - name: Fetch current task definition
+        run: |
+          aws ecs describe-task-definition --task-definition rtrp-alerting \
+            --query taskDefinition > task-definition.json
+      - id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: alerting
+          image: ${{ steps.build-image.outputs.image }}
+      - uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: rtrp-alerting-service
+          cluster: rtrp-cluster
+          wait-for-service-stability: true                   

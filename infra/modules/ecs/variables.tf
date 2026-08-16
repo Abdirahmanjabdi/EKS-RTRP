@@ -54,3 +54,7 @@ variable "redis_port" {
 variable "redis_auth_token_secret_arn" {
   type = string
 }
+
+variable "sns_topic_arn" {
+  type = string
+}

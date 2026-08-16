@@ -56,6 +56,15 @@ data "terraform_remote_state" "cache" {
   }
 }
 
+data "terraform_remote_state" "alerting" {
+  backend = "s3"
+  config = {
+    bucket = "rtrp-terraform-state-04b6152c"
+    key    = "alerting/terraform.tfstate"
+    region = "eu-north-1"
+  }
+}
+
 module "ecs" {
   source = "../modules/ecs"
 
@@ -76,4 +85,6 @@ module "ecs" {
   redis_host                  = data.terraform_remote_state.cache.outputs.primary_endpoint
   redis_port                  = data.terraform_remote_state.cache.outputs.port
   redis_auth_token_secret_arn = data.terraform_remote_state.cache.outputs.auth_token_secret_arn
+
+  sns_topic_arn = data.terraform_remote_state.alerting.outputs.topic_arn
 }
