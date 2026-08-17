@@ -52,6 +52,49 @@ Why this milestone structure exists at all — deploying a single container
 correctly, with real infra-as-code and CI/CD, before adding messaging — is
 covered in [ADR-001](docs/adr/ADR-001-ecs-before-eks.md).
 
+## The Big Four Questions
+
+**What is this app?**
+RTRP is a trade risk platform. You send it a trade over HTTPS, it saves the
+trade and publishes an event. A separate service picks that up, works out
+the exposure, saves it, and publishes it again. Two more services watch
+that stream: one flags anomalies with a small ML model, the other turns a
+big exposure or a flagged anomaly into a real email alert. Everything talks
+through RabbitMQ, no service calls another directly. Six services on ECS
+Fargate, all provisioned with Terraform, deployed through GitHub Actions
+with OIDC so there are no AWS keys sitting in GitHub.
+
+**Why this application?**
+I wanted something that forces real infrastructure decisions instead of a
+simple CRUD app. Trading and risk gave me a reason to build messaging,
+persistence, caching, anomaly detection, and alerting, and to actually
+think about security groups, secrets, and IAM the way a real system needs.
+I built it in milestones on purpose too, so the complexity grows the way a
+real system's actually does, instead of showing up all at once.
+
+**Why ECS, not a VM or Vercel/Netlify?**
+Vercel and Netlify are built for short request and response functions and
+static sites. My consumers hold a connection open to RabbitMQ and sit there
+waiting for messages, which doesn't fit that model, and neither platform
+teaches VPCs, security groups, or IAM, which was the actual point. A plain
+EC2 box would work but then I'm patching an OS and writing my own deploy
+scripts by hand. ECS Fargate gives me real container orchestration, health
+checks, and rolling deploys, without owning servers. EKS was the other
+option but I hadn't done the Kubernetes fundamentals yet, and its control
+plane alone costs about $73 a month before anything even runs, so that
+reasoning is written down in an ADR and EKS is pushed to M5.
+
+**How many users, or how many are you expecting?**
+Honestly, none right now. This is a learning project, so it runs as small
+and cheap as possible: one task per service, a small database and cache,
+single AZ, no HA broker. But it's built so scaling is turning dials, not a
+rewrite. Each service scales on its own since none of them call each other
+directly, the database and cache resize without touching code, and every
+deploy already rolls out with zero downtime. If it needed real traffic
+tomorrow, the honest list of what's missing is Multi-AZ RDS, a clustered
+cache, a highly available broker, and auto scaling on the ECS services.
+None of that exists yet, but none of it needs a redesign either.
+
 ## Architecture
 
 ![RTRP AWS Architecture](docs/architecture.svg)
@@ -96,20 +139,11 @@ A few things worth pointing out that aren't obvious from the boxes alone:
 
 ## App Demo
 
-<!-- TODO: screenshot showing https://tm.sentineltrading.org in a browser
-     address bar with the padlock/HTTPS indicator visible, and the /health
-     response. Capture this manually — it has to be a real browser screenshot. -->
-
 `https://tm.sentineltrading.org/health` → `{"status": "ok"}`
 <img width="1093" height="270" alt="image" src="https://github.com/user-attachments/assets/bb911ebc-7632-45bf-9e92-0ac491d753b1" />
+
 Grafana Dashboard
 <img width="1873" height="912" alt="image" src="https://github.com/user-attachments/assets/63969ffe-8e35-499f-b4c1-ad98dcfadd04" />
-
-CICD INFRA
-<img width="1908" height="657" alt="image" src="https://github.com/user-attachments/assets/9800e4e0-ba3a-44f5-9a5c-1ef0578da83d" />
-CICD APP
-<img width="1271" height="681" alt="image" src="https://github.com/user-attachments/assets/6835c64f-61aa-4cee-a2a4-e67d099bb944" />
-
 
 
 ## Local Setup
@@ -207,8 +241,16 @@ theoretical risk.
 
 ## Pipelines
 
-<!-- TODO: screenshots of app.yml, infra.yml (plan + apply), and
-     infra-destroy.yml all showing successful runs in the GitHub Actions tab. -->
+CICD Infra (`infra.yml`)
+<img width="1908" height="657" alt="image" src="https://github.com/user-attachments/assets/9800e4e0-ba3a-44f5-9a5c-1ef0578da83d" />
+
+CICD App (`app.yml`)
+<img width="1271" height="681" alt="image" src="https://github.com/user-attachments/assets/6835c64f-61aa-4cee-a2a4-e67d099bb944" />
+
+`infra-destroy.yml` is intentionally not screenshotted mid-run — it tears
+down the live environment, so triggering it just for a screenshot would be
+destructive. The confirmation-phrase gate in the workflow file is the
+evidence it's real and wired up rather than untested.
 
 - **`app.yml`** — on push to `main` touching app code: 6 independent jobs
   (Trade API, Risk Engine, ML Inference, Alerting, Prometheus, Grafana), each
