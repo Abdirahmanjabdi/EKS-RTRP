@@ -137,6 +137,20 @@ A few things worth pointing out that aren't obvious from the boxes alone:
   between modules that read each other's outputs — documented as a known
   tradeoff, not a hidden one.
 
+### M1 baseline
+
+![RTRP M1 Baseline Architecture](docs/architecture-m1.svg)
+
+The ECS setup above is really just M1: one container, one ALB, one ECR
+repo. Everything from M2 onward (RabbitMQ, the three extra services,
+Postgres, Redis, Prometheus, Grafana, SNS) got built on top of this same
+ECS foundation, not bolted onto something new. The plan was always to move
+to EKS eventually, but deploying a Kubernetes cluster for a single
+container didn't make sense, cost-wise or learning-wise, so ECS Fargate is
+where M1 through M4 live, and EKS is M5, once there's an actual multi-service
+system worth migrating instead of one lonely container. ADR-001 has the
+full reasoning.
+
 ## App Demo
 
 `https://tm.sentineltrading.org/health` → `{"status": "ok"}`
