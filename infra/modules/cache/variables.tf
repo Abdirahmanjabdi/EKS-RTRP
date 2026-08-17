@@ -28,3 +28,8 @@ variable "engine_version" {
   default     = "9.1"
   description = "Valkey engine version - verified via aws elasticache describe-cache-engine-versions on 2026-08-15"
 }
+
+variable "ml_inference_security_group_id" {
+  type        = string
+  description = "ML Inference's ECS tasks security group ID, allowed to reach the broker"
+}

@@ -17,3 +17,13 @@ output "risk_engine_security_group_id" {
   description = "Security group ID of the Risk Engine tasks, for peer ingress rules from other modules"
   value       = module.ecs.risk_engine_security_group_id
 }
+
+output "ml_inference_security_group_id" {
+  description = "Security group ID of the ML Inference tasks, for peer ingress rules from other modules"
+  value       = module.ecs.ml_inference_security_group_id
+}
+
+output "alerting_security_group_id" {
+  description = "Security group ID of the Alerting tasks, for peer ingress rules from other modules"
+  value       = module.ecs.alerting_security_group_id
+}

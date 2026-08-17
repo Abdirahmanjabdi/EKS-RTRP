@@ -27,3 +27,13 @@ variable "risk_engine_security_group_id" {
   type        = string
   description = "Risk Engine's ECS tasks security group ID, allowed to reach the broker"
 }
+
+variable "ml_inference_security_group_id" {
+  type        = string
+  description = "ML Inference's ECS tasks security group ID, allowed to reach the broker"
+}
+
+variable "alerting_security_group_id" {
+  type        = string
+  description = "Alerting's ECS tasks security group ID, allowed to reach the broker"
+}

@@ -25,14 +25,16 @@ resource "aws_security_group" "rabbitmq" {
   description = "Allow AMQPS from ECS tasks only"
   vpc_id      = var.vpc_id
 
-  ingress {
-    description = "AMQPS from Trade API and Risk Engine tasks"
+    ingress {
+    description = "AMQPS from Trade API, Risk Engine, ML Inference, and Alerting tasks"
     from_port   = 5671
     to_port     = 5671
     protocol    = "tcp"
     security_groups = [
       var.ecs_tasks_security_group_id,
       var.risk_engine_security_group_id,
+      var.ml_inference_security_group_id,
+      var.alerting_security_group_id,
     ]
   }
 

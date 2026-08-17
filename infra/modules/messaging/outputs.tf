@@ -14,3 +14,4 @@ output "credentials_secret_arn" {
   value       = aws_secretsmanager_secret.rabbitmq.arn
   description = "Secrets Manager ARN holding the broker username/password"
 }
+

@@ -52,4 +52,5 @@ module "cache" {
 
   ecs_tasks_security_group_id   = data.terraform_remote_state.ecs.outputs.ecs_tasks_security_group_id
   risk_engine_security_group_id = data.terraform_remote_state.ecs.outputs.risk_engine_security_group_id
+  ml_inference_security_group_id = data.terraform_remote_state.ecs.outputs.ml_inference_security_group_id
 }

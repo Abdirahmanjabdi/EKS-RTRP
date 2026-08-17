@@ -10,7 +10,7 @@ resource "aws_security_group" "postgres" {
   description = "Allow PostgreSQL from Trade API and Risk Engine tasks only"
   vpc_id      = var.vpc_id
 
-  ingress {
+    ingress {
     description = "PostgreSQL from ECS tasks"
     from_port   = 5432
     to_port     = 5432
@@ -18,6 +18,8 @@ resource "aws_security_group" "postgres" {
     security_groups = [
       var.ecs_tasks_security_group_id,
       var.risk_engine_security_group_id,
+      var.ml_inference_security_group_id,
+      var.alerting_security_group_id,
     ]
   }
 

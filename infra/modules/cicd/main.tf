@@ -116,6 +116,18 @@ resource "aws_iam_role_policy" "ci_permissions" {
       },
 
       {
+        Effect   = "Allow"
+        Action   = ["sns:*"]
+        Resource = "*"
+      },
+
+      {
+        Effect = "Allow"
+        Action = ["elasticache:*"]
+        Resource = "*"
+      },
+
+      {
         Effect = "Allow"
         Action = [
           "ecr:CompleteLayerUpload",

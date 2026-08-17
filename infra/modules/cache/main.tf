@@ -8,7 +8,7 @@ resource "aws_security_group" "redis" {
   description = "Allow Redis/Valkey from Trade API and Risk Engine tasks only"
   vpc_id      = var.vpc_id
 
-  ingress {
+    ingress {
     description = "Valkey from ECS tasks"
     from_port   = 6379
     to_port     = 6379
@@ -16,6 +16,7 @@ resource "aws_security_group" "redis" {
     security_groups = [
       var.ecs_tasks_security_group_id,
       var.risk_engine_security_group_id,
+      var.ml_inference_security_group_id,
     ]
   }
 
