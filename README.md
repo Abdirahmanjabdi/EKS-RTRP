@@ -101,6 +101,16 @@ A few things worth pointing out that aren't obvious from the boxes alone:
      response. Capture this manually — it has to be a real browser screenshot. -->
 
 `https://tm.sentineltrading.org/health` → `{"status": "ok"}`
+<img width="1093" height="270" alt="image" src="https://github.com/user-attachments/assets/bb911ebc-7632-45bf-9e92-0ac491d753b1" />
+Grafana Dashboard
+<img width="1873" height="912" alt="image" src="https://github.com/user-attachments/assets/63969ffe-8e35-499f-b4c1-ad98dcfadd04" />
+
+CICD INFRA
+<img width="1908" height="657" alt="image" src="https://github.com/user-attachments/assets/9800e4e0-ba3a-44f5-9a5c-1ef0578da83d" />
+CICD APP
+<img width="1271" height="681" alt="image" src="https://github.com/user-attachments/assets/6835c64f-61aa-4cee-a2a4-e67d099bb944" />
+
+
 
 ## Local Setup
 
