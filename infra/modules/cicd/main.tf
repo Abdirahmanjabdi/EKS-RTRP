@@ -26,7 +26,8 @@ resource "aws_iam_role" "github_ci" {
             # ADD BOTH CONDITIONS HERE AS A LIST:
             "token.actions.githubusercontent.com:sub" = [
               "repo:Abdirahmanjabdi/RTRP:ref:refs/heads/*",
-              "repo:Abdirahmanjabdi/RTRP:environment:production-infra"
+              "repo:Abdirahmanjabdi/RTRP:environment:production-infra",
+              "repo:Abdirahmanjabdi/RTRP:pull_request"
             ]
           }
         }
@@ -106,24 +107,6 @@ resource "aws_iam_role_policy" "ci_permissions" {
       {
         Effect   = "Allow"
         Action   = ["sns:*"]
-        Resource = "*"
-      },
-
-      {
-        Effect = "Allow"
-        Action = ["elasticache:*"]
-        Resource = "*"
-      },
-
-      {
-        Effect   = "Allow"
-        Action   = ["sns:*"]
-        Resource = "*"
-      },
-
-      {
-        Effect = "Allow"
-        Action = ["elasticache:*"]
         Resource = "*"
       },
 

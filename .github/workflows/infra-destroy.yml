@@ -92,9 +92,66 @@ jobs:
           terraform init -input=false
           terraform destroy -input=false -auto-approve
 
+  destroy-database:
+    name: Destroy database
+    needs: destroy-ecs
+    runs-on: ubuntu-latest
+    environment: production-infra
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::026703081738:role/rtrp-github-ci-role
+          aws-region: eu-north-1
+      - working-directory: infra/database
+        run: |
+          terraform init -input=false
+          terraform destroy -input=false -auto-approve
+          
+  destroy-cache:
+    name: Destroy cache
+    needs: destroy-ecs
+    runs-on: ubuntu-latest
+    environment: production-infra
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::026703081738:role/rtrp-github-ci-role
+          aws-region: eu-north-1
+      - working-directory: infra/cache
+        run: |
+          terraform init -input=false
+          terraform destroy -input=false -auto-approve
+
+  destroy-alerting:
+    name: Destroy alerting
+    needs: destroy-ecs
+    runs-on: ubuntu-latest
+    environment: production-infra
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::026703081738:role/rtrp-github-ci-role
+          aws-region: eu-north-1
+      - working-directory: infra/alerting
+        run: |
+          terraform init -input=false
+          terraform destroy -input=false -auto-approve          
+
   destroy-ecr:
     name: Destroy ecr
-    needs: destroy-ecs
+    needs: [destroy-database, destroy-cache, destroy-alerting]
     runs-on: ubuntu-latest
     environment: production-infra
     steps:
