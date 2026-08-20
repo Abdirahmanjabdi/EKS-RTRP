@@ -139,7 +139,7 @@ A few things worth pointing out that aren't obvious from the boxes alone:
 
 ### M1 baseline
 
-![RTRP M1 Baseline Architecture](docs/architecture-m1.svg)
+[![RTRP M1 Baseline Architecture](docs/architecture-m1.svg)](https://lucid.app/lucidchart/8033a1d7-53fa-4fc4-b006-68dd9feaddbb/edit?viewport_loc=-2940%2C5656%2C9084%2C4596%2C0_0&invitationId=inv_df0277e1-9a98-48e5-a539-0f8fd7c1bb1a)
 
 The ECS setup above is really just M1: one container, one ALB, one ECR
 repo. Everything from M2 onward (RabbitMQ, the three extra services,
