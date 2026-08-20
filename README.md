@@ -97,7 +97,8 @@ None of that exists yet, but none of it needs a redesign either.
 
 ## Architecture
 
-![RTRP AWS Architecture](docs/architecture.svg)
+<img width="4096" height="1442" alt="image" src="https://github.com/user-attachments/assets/8203e626-3c1a-4e60-a173-8c42f5653532" />
+
 
 Three path types run through this system, colour-coded in the diagram: the
 **live request path** (blue) is a synchronous HTTPS call — Client → Route 53
@@ -139,7 +140,9 @@ A few things worth pointing out that aren't obvious from the boxes alone:
 
 ### M1 baseline
 
-https://lucid.app/lucidchart/8033a1d7-53fa-4fc4-b006-68dd9feaddbb/edit?viewport_loc=-2940%2C5656%2C9084%2C4596%2C0_0&invitationId=inv_df0277e1-9a98-48e5-a539-0f8fd7c1bb1a
+<img width="4096" height="3130" alt="image" src="https://github.com/user-attachments/assets/4ed86cd4-216d-4587-976c-04554dd3a666" />
+
+
 
 The ECS setup above is really just M1: one container, one ALB, one ECR
 repo. Everything from M2 onward (RabbitMQ, the three extra services,
