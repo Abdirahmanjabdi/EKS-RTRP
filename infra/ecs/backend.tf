@@ -74,8 +74,8 @@ module "ecs" {
   public_subnet_ids   = data.terraform_remote_state.vpc.outputs.public_subnet_ids
   private_subnet_ids  = data.terraform_remote_state.vpc.outputs.private_subnet_ids
 
-  rabbitmq_amqps_endpoint         = data.terraform_remote_state.messaging.outputs.amqps_endpoint
-  rabbitmq_credentials_secret_arn = data.terraform_remote_state.messaging.outputs.credentials_secret_arn
+ rabbitmq_amqps_endpoint         = "amqps://placeholder-destroyed:5671"
+  rabbitmq_credentials_secret_arn = "arn:aws:secretsmanager:eu-north-1:026703081738:secret:placeholder-destroyed"
 
   postgres_host                   = split(":", data.terraform_remote_state.database.outputs.endpoint)[0]
   postgres_port                   = split(":", data.terraform_remote_state.database.outputs.endpoint)[1]
