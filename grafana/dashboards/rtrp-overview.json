@@ -1,0 +1,90 @@
+{
+  "title": "RTRP Overview",
+  "uid": "rtrp-overview",
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Trades Received (rate, 5m)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "rate(trades_received_total[5m])", "legendFormat": "trades/sec" }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Trade Publish Duration (p95)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, rate(trade_publish_duration_seconds_bucket[5m]))",
+          "legendFormat": "p95 seconds"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Risk Events Processed (rate, 5m)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "rate(risk_events_processed_total[5m])", "legendFormat": "events/sec" }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Risk Processing Duration (p95)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, rate(risk_processing_duration_seconds_bucket[5m]))",
+          "legendFormat": "p95 seconds"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Latest Exposure by Symbol",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "risk_latest_exposure", "format": "table", "instant": true }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Scrape Target Health",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "up", "legendFormat": "{{job}}" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": { "text": "DOWN", "color": "red", "index": 0 },
+                "1": { "text": "UP", "color": "green", "index": 1 }
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
