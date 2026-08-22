@@ -1,0 +1,5 @@
+apiVersion: v2
+name: rtrp-app
+description: RTRP trading platform on EKS
+version: 0.1.0
+appVersion: "v0"

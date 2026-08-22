@@ -32,11 +32,17 @@ resource "aws_subnet" "public" {
   cidr_block              = var.public_subnet_cidrs[count.index]
   availability_zone       = data.aws_availability_zones.available.names[count.index]
   map_public_ip_on_launch = true
-
-  tags = {
+  
+  tags = merge(
+    {
     Name = "${var.project_name}-public-subnet-${count.index + 1}"
     Tier = "Public"
-  }
+  },
+    var.eks_cluster_name != "" ? {
+      "kubernetes.io/role/elb"                        = "1"
+      "kubernetes.io/cluster/${var.eks_cluster_name}"  = "shared"
+    } : {}
+  )
 }
 
 # 4. Private Subnets (spanning 2 AZs)
@@ -46,10 +52,16 @@ resource "aws_subnet" "private" {
   cidr_block        = var.private_subnet_cidrs[count.index]
   availability_zone = data.aws_availability_zones.available.names[count.index]
 
-  tags = {
+  tags = merge ({
     Name = "${var.project_name}-private-subnet-${count.index + 1}"
     Tier = "Private"
-  }
+    
+  },
+    var.eks_cluster_name != "" ? {
+      "kubernetes.io/role/internal-elb"               = "1"
+      "kubernetes.io/cluster/${var.eks_cluster_name}"  = "shared"
+    } : {}
+  )
 }
 
 # 5. Single NAT Gateway (Cost Optimization: Single EIP & NAT Gateway in Public Subnet 1)

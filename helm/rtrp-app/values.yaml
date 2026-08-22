@@ -1,0 +1,74 @@
+global:
+  image:
+    registry: 026703081738.dkr.ecr.eu-north-1.amazonaws.com
+    tag: v0
+
+tradeApi:
+  replicaCount: 1
+  image:
+    repository: rtrp-trade-api
+  port: 8000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+  ingress:
+    enabled: true
+    host: eks.lab.sentineltrading.org
+    tls: true
+    
+
+riskEngine:
+  replicaCount: 1
+  image:
+    repository: rtrp-risk-engine
+  port: 8001
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+mlInference:
+  replicaCount: 1
+  image:
+    repository: rtrp-ml-inference
+  port: 8002
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+alerting:
+  replicaCount: 1
+  image:
+    repository: rtrp-alerting
+  port: 8003
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+env:
+  RABBITMQ_URL: "amqp://guest:guest@localhost:5672"
+  RABBITMQ_USERNAME: "guest"
+  RABBITMQ_PASSWORD: "guest"
+  POSTGRES_HOST: "localhost"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "rtrp"
+  POSTGRES_USER: "postgres"
+  POSTGRES_PASSWORD: "postgres"
+  REDIS_HOST: "localhost"
+  REDIS_PORT: "6379"
+  REDIS_AUTH_TOKEN: "dummy"

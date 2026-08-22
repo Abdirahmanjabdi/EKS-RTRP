@@ -29,4 +29,5 @@ module "vpc" {
   vpc_cidr             = var.vpc_cidr
   public_subnet_cidrs  = var.public_subnet_cidrs
   private_subnet_cidrs = var.private_subnet_cidrs
+  eks_cluster_name = var.eks_cluster_name
 }

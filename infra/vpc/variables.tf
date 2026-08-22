@@ -27,3 +27,9 @@ variable "private_subnet_cidrs" {
   default     = ["10.0.11.0/24", "10.0.12.0/24"]
   description = "CIDR blocks for private subnets (spans 2 AZs)"
 }
+
+variable "eks_cluster_name" {
+  type        = string
+  default     = "rtrp-eks"
+  description = "EKS cluster name for subnet discovery tags"
+}

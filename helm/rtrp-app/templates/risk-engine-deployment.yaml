@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: risk-engine
+  labels:
+    app: risk-engine
+spec:
+  replicas: {{ .Values.riskEngine.replicaCount }}
+  selector:
+    matchLabels:
+      app: risk-engine
+  template:
+    metadata:
+      labels:
+        app: risk-engine
+    spec:
+      containers:
+        - name: risk-engine
+          image: "{{ .Values.global.image.registry }}/{{ .Values.riskEngine.image.repository }}:{{ .Values.global.image.tag }}"
+          ports:
+            - containerPort: {{ .Values.riskEngine.port }}
+          env:
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          resources:
+            requests:
+              cpu: {{ .Values.riskEngine.resources.requests.cpu }}
+              memory: {{ .Values.riskEngine.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.riskEngine.resources.limits.cpu }}
+              memory: {{ .Values.riskEngine.resources.limits.memory }}

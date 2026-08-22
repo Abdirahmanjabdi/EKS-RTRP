@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trade-api
+  labels:
+    app: trade-api
+spec:
+  replicas: {{ .Values.tradeApi.replicaCount }}
+  selector:
+    matchLabels:
+      app: trade-api
+  template:
+    metadata:
+      labels:
+        app: trade-api
+    spec:
+      containers:
+        - name: trade-api
+          image: "{{ .Values.global.image.registry }}/{{ .Values.tradeApi.image.repository }}:{{ .Values.global.image.tag }}"
+          ports:
+            - containerPort: {{ .Values.tradeApi.port }}
+          env:
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          resources:
+            requests:
+              cpu: {{ .Values.tradeApi.resources.requests.cpu }}
+              memory: {{ .Values.tradeApi.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.tradeApi.resources.limits.cpu }}
+              memory: {{ .Values.tradeApi.resources.limits.memory }}

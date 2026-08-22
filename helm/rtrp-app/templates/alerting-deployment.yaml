@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alerting
+  labels:
+    app: alerting
+spec:
+  replicas: {{ .Values.alerting.replicaCount }}
+  selector:
+    matchLabels:
+      app: alerting
+  template:
+    metadata:
+      labels:
+        app: alerting
+    spec:
+      containers:
+        - name: alerting
+          image: "{{ .Values.global.image.registry }}/{{ .Values.alerting.image.repository }}:{{ .Values.global.image.tag }}"
+          ports:
+            - containerPort: {{ .Values.alerting.port }}
+          env:
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          resources:
+            requests:
+              cpu: {{ .Values.alerting.resources.requests.cpu }}
+              memory: {{ .Values.alerting.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.alerting.resources.limits.cpu }}
+              memory: {{ .Values.alerting.resources.limits.memory }}

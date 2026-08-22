@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-inference
+  labels:
+    app: ml-inference
+spec:
+  replicas: {{ .Values.mlInference.replicaCount }}
+  selector:
+    matchLabels:
+      app: ml-inference
+  template:
+    metadata:
+      labels:
+        app: ml-inference
+    spec:
+      containers:
+        - name: ml-inference
+          image: "{{ .Values.global.image.registry }}/{{ .Values.mlInference.image.repository }}:{{ .Values.global.image.tag }}"
+          ports:
+            - containerPort: {{ .Values.mlInference.port }}
+          env:
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          resources:
+            requests:
+              cpu: {{ .Values.mlInference.resources.requests.cpu }}
+              memory: {{ .Values.mlInference.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.mlInference.resources.limits.cpu }}
+              memory: {{ .Values.mlInference.resources.limits.memory }}
