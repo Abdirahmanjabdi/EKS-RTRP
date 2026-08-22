@@ -1,83 +1,59 @@
-name: Infrastructure CI/CD
+name: Terraform
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - 'infra/**'
-      - '.github/workflows/infra.yml'
+    branches: [main]
+    paths: ['infra/**']
   pull_request:
-    branches:
-      - main
-    paths:
-      - 'infra/**'
+    branches: [main]
+    paths: ['infra/**']
 
-permissions:
-  id-token: write
-  contents: read
-  pull-requests: write
+env:
+  AWS_REGION: eu-north-1
 
 jobs:
-  terraform-plan:
-    name: TF Plan (${{ matrix.module }})
+  terraform:
+    name: Terraform Plan & Apply
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false # Prevents one failure from cancelling the other successful plans
-      matrix:
-        module: [ vpc, ecr, dns, ecs, cicd, messaging, database, cache, alerting ]
+    permissions:
+      id-token: write
+      contents: read
+
     steps:
-      - name: Checkout Code
+      - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.5.0
 
-      - name: Configure AWS Credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::026703081738:role/rtrp-github-ci-role
-          aws-region: eu-north-1
+      - name: Terraform Init (VPC)
+        working-directory: infra/vpc
+        run: terraform init
 
-      - name: Terraform Init & Validate
-        working-directory: infra/${{ matrix.module }}
-        run: |
-          terraform init -input=false
-          terraform validate
+      - name: Terraform Plan (VPC)
+        working-directory: infra/vpc
+        run: terraform plan -no-color
 
-      - name: Terraform Plan
-        working-directory: infra/${{ matrix.module }}
-        run: terraform plan -input=false
+      - name: Terraform Init (EKS)
+        working-directory: infra/eks
+        run: terraform init
 
-  terraform-apply:
-    name: TF Apply (${{ matrix.module }})
-    needs: terraform-plan
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    environment: production-infra # Single approval gate releases all matrix jobs
-    strategy:
-      fail-fast: false
-      matrix:
-        module: [ vpc, ecr, dns, ecs, cicd, messaging, database, cache, alerting ]
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - name: Terraform Plan (EKS)
+        working-directory: infra/eks
+        run: terraform plan -no-color
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.5.0
+      - name: Terraform Apply (VPC)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        working-directory: infra/vpc
+        run: terraform apply -auto-approve
 
-      - name: Configure AWS Credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::026703081738:role/rtrp-github-ci-role
-          aws-region: eu-north-1
-
-      - name: Terraform Init & Apply
-        working-directory: infra/${{ matrix.module }}
-        run: |
-          terraform init -input=false
-          terraform apply -input=false -auto-approve
+      - name: Terraform Apply (EKS)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        working-directory: infra/eks
+        run: terraform apply -auto-approve
