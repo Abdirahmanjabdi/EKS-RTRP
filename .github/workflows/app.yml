@@ -4,19 +4,24 @@ on:
   push:
     branches: [main]
     paths:
-      - 'helm/**'
-      - 'services/**'
-      - 'Dockerfile*'
+    - 'helm/**'
+    - 'main.py'
+    - 'risk_engine/**'
+    - 'ml_inference/**'
+    - 'alerting/**'
+    - 'Dockerfile'
   pull_request:
-    branches: [main]
-    paths:
-      - 'helm/**'
-      - 'services/**'
+   branches: [main]
+   paths:
+    - 'helm/**'
+    - 'main.py'
+    - 'risk_engine/**'
+    - 'ml_inference/**'
+    - 'alerting/**'
 
 env:
   AWS_REGION: eu-north-1
   ECR_REGISTRY: 026703081738.dkr.ecr.eu-north-1.amazonaws.com
-
 jobs:
   lint-and-test:
     name: Lint & Test
@@ -33,11 +38,12 @@ jobs:
         run: pip install ruff pytest
 
       - name: Lint
-        run: ruff check services/
+        run: ruff check main.py risk_engine/ ml_inference/ alerting/
 
       - name: Helm Lint
         run: |
           helm lint helm/rtrp-app
+       
 
   build-and-push:
     name: Build & Push Images
@@ -48,8 +54,20 @@ jobs:
       id-token: write
       contents: read
     strategy:
-      matrix:
-        service: [trade-api, risk-engine, ml-inference, alerting]
+     matrix:
+      include:
+      - service: trade-api
+        dockerfile: Dockerfile
+        context: .
+      - service: risk-engine
+        dockerfile: risk_engine/Dockerfile
+        context: risk_engine
+      - service: ml-inference
+        dockerfile: ml_inference/Dockerfile
+        context: ml_inference
+      - service: alerting
+        dockerfile: alerting/Dockerfile
+        context: alerting
     steps:
       - uses: actions/checkout@v4
 
@@ -64,9 +82,9 @@ jobs:
 
       - name: Build and Push
         run: |
-          IMAGE=${{ env.ECR_REGISTRY }}/rtrp-${{ matrix.service }}:${{ github.sha }}
-          docker build -t $IMAGE -f services/${{ matrix.service }}/Dockerfile services/${{ matrix.service }}
-          docker push $IMAGE
+         IMAGE=${{ env.ECR_REGISTRY }}/rtrp-${{ matrix.service }}:${{ github.sha }}
+         docker build -t $IMAGE -f ${{ matrix.dockerfile }} ${{ matrix.context }}
+         docker push $IMAGE
 
   deploy:
     name: Update Helm Values
@@ -86,5 +104,5 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add helm/rtrp-app/values.yaml
-          git commit -m "chore: update image tag to ${{ github.sha }}"
+          git commit -m "chore: update image tag to ${{ github.sha }} [skip ci]"
           git push
