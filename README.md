@@ -34,7 +34,8 @@ services scale, restart, and fail without taking each other down.
 
 ## Architecture
 
-![RTRP Architecture](docs/diagrams/rtrp-traffic-flow.png)
+<img width="4095" height="1609" alt="image" src="https://github.com/user-attachments/assets/89573e92-8a78-437f-a466-16444af118a5" />
+
 
 Traffic flows through the system in two paths:
 
